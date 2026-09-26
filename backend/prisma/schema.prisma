@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("MANAGER") // ADMIN, CHARTERING_MANAGER, LOGISTICS_MANAGER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Port {
+  id                  String   @id @default(uuid())
+  name                String
+  country             String
+  latitude            Float
+  longitude           Float
+  maxLoa              Float
+  maxBeam             Float
+  maxDraft            Float
+  cargoHandlingRate   Float    // MT per day
+  historicalTurnaround Float   // Days
+  congestionLevel     String   @default("LOW") // LOW, MEDIUM, HIGH, CRITICAL
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  originRoutes      Route[] @relation("RouteOrigin")
+  destinationRoutes Route[] @relation("RouteDestination")
+}
+
+model VesselType {
+  id          String   @id @default(uuid())
+  name        String   @unique // Handysize, Supramax, Ultramax, Panamax, Kamsarmax, Capesize
+  typicalDwt  Float
+  typicalDraft Float
+  typicalLoa  Float
+  typicalBeam Float
+  vessels     Vessel[]
+}
+
+model Vessel {
+  id              String   @id @default(uuid())
+  imo             String   @unique
+  name            String
+  vesselTypeId    String
+  vesselType      VesselType @relation(fields: [vesselTypeId], references: [id])
+  dwt             Float
+  gt              Float
+  loa             Float
+  beam            Float
+  maxDraft        Float
+  speed           Float    // knots
+  fuelConsumption Float    // MT per day
+  age             Int
+  currentLocation String?
+  availableDate   DateTime?
+  status          String   @default("AVAILABLE") // AVAILABLE, IN_TRANSIT, FIXED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Route {
+  id            String   @id @default(uuid())
+  originId      String
+  origin        Port     @relation("RouteOrigin", fields: [originId], references: [id])
+  destinationId String
+  destination   Port     @relation("RouteDestination", fields: [destinationId], references: [id])
+  distance      Float    // Nautical miles
+  estimatedDays Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  freightRates HistoricalFreightRate[]
+}
+
+model HistoricalFreightRate {
+  id        String   @id @default(uuid())
+  routeId   String
+  route     Route    @relation(fields: [routeId], references: [id])
+  date      DateTime
+  rate      Float
+  currency  String   @default("USD")
+  unit      String   @default("MT") // MT, DAY
+  source    String   @default("SYNTHETIC")
+  createdAt DateTime @default(now())
+}
